@@ -7,6 +7,9 @@ import 'pages/change_notifier.dart';
 import 'pages/friends_list.dart';
 // import 'pages/chat.dart';
 
+// this app is working fine but we have to solve the false cases
+// work on this on free time
+
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Hive.initFlutter();
