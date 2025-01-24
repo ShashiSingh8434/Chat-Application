@@ -149,19 +149,40 @@ Future<List<Map<String, dynamic>>> getMsg(
     if (dataSnapshot.exists) {
       final allData = dataSnapshot.value as Map<dynamic, dynamic>;
 
-      messagesList = allData.values
-          .map((value) => Map<String, dynamic>.from(value))
-          .toList();
+      // Extract messages along with their timestamps (keys)
+      List<Map<String, dynamic>> messagesWithTimestamps = allData.entries.map(
+        (entry) {
+          return {
+            "timestamp": entry.key, // Keep the timestamp for sorting
+            ...Map<String, dynamic>.from(entry.value), // Message data
+          };
+        },
+      ).toList();
+
+      // Sort the messages by timestamp
+      messagesWithTimestamps.sort((a, b) {
+        return a['timestamp'].compareTo(b['timestamp']);
+      });
+
+      // Remove the timestamp key if not needed in the UI
+      messagesList = messagesWithTimestamps.map((msg) {
+        return {
+          "sender": msg["sender"],
+          "message": msg["message"],
+        };
+      }).toList();
     }
   } catch (e) {
-    // print("Error: $e");
+    // Handle errors
   }
+
+  return messagesList;
+}
+
+
 
 // Sample --->
 // messagesList = [
 //   {"sender": "Alice", "message": "Hi!"},
 //   {"sender": "Bob", "message": "Hello!"}
 // ]
-
-  return messagesList;
-}
