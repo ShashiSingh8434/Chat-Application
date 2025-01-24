@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import 'change_notifier.dart';
+import 'login.dart';
 
 class NameListPage extends StatefulWidget {
   const NameListPage({super.key});
@@ -8,7 +11,11 @@ class NameListPage extends StatefulWidget {
 }
 
 class NameListPageState extends State<NameListPage> {
-  final List<String> names = ["John", "Jane", "Paul", "Anna"];
+  final List<String> names = [
+    "John",
+    "Jane",
+    "Paul",
+  ];
 
   void _showAddNameDialog() {
     String newName = "";
@@ -50,9 +57,36 @@ class NameListPageState extends State<NameListPage> {
 
   @override
   Widget build(BuildContext context) {
+    // final username = context.watch<UserProvider>().username;
+
     return Scaffold(
       appBar: AppBar(
         title: Text("Name List"),
+        actions: [
+          Consumer<UserProvider>(
+            builder: (context, userProvider, child) {
+              return TextButton(
+                onPressed: () {},
+                child: Text(userProvider.username),
+              );
+            },
+          ),
+          IconButton(
+            icon: const Icon(Icons.person),
+            onPressed: () async {
+              final username = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const LoginScreen(),
+                ),
+              );
+
+              if (username != null) {
+                context.read<UserProvider>().setUsername(username);
+              }
+            },
+          ),
+        ],
       ),
       body: Column(
         children: [
@@ -95,21 +129,3 @@ class NameListPageState extends State<NameListPage> {
     );
   }
 }
-
-// class NameDetailPage extends StatelessWidget {
-//   final String name;
-
-//   const NameDetailPage({super.key, required this.name});
-
-//   @override
-//   Widget build(BuildContext context) {
-//     return Scaffold(
-//       appBar: AppBar(
-//         title: Text(name),
-//       ),
-//       body: Center(
-//         child: Text("Details for $name"),
-//       ),
-//     );
-//   }
-// }
