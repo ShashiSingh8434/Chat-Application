@@ -1,4 +1,5 @@
 import 'package:firebase_database/firebase_database.dart';
+import 'package:intl/intl.dart';
 
 final DatabaseReference _database = FirebaseDatabase.instance
     .refFromURL('https://chat-app-shashi-singh-default-rtdb.firebaseio.com/');
@@ -78,9 +79,10 @@ Future<bool> verifyChat(String member1, String member2) async {
   return verifiedChat;
 }
 
-Future<void> pushMsg(
-    String sender, String receiver, String message, String datetime) async {
+Future<void> pushMsg(String sender, String receiver, String message) async {
   // datetime format is yyyy-mm-dd-hh-mm-ss
+  DateTime now = DateTime.now();
+  String datetime = DateFormat('yyyy-MM-dd-HH-mm-ss').format(now);
   Map<String, String> sendData = {"sender": sender, "message": message};
   String chatname = "";
   if (await verifyChat(sender, receiver)) {
@@ -104,7 +106,8 @@ Future<void> pushMsg(
   }
 }
 
-Future<Map<dynamic, dynamic>> getMsg(String sender, String receiver) async {
+Future<List<Map<String, dynamic>>> getMsg(
+    String sender, String receiver) async {
   String chatname = "";
   if (await verifyChat(sender, receiver)) {
     chatname = "$sender-$receiver chat";
@@ -114,9 +117,7 @@ Future<Map<dynamic, dynamic>> getMsg(String sender, String receiver) async {
     chatname = "";
   }
 
-  Map<dynamic, dynamic> sendData = {};
-
-  // currently sendData is empty
+  List<Map<String, dynamic>> messagesList = [];
 
   try {
     DataSnapshot dataSnapshot =
@@ -125,21 +126,19 @@ Future<Map<dynamic, dynamic>> getMsg(String sender, String receiver) async {
     if (dataSnapshot.exists) {
       final allData = dataSnapshot.value as Map<dynamic, dynamic>;
 
-//   here -allData- have all the messages from the message section of chat
-
-//   This is the format of data stored in allData
-//   {
-//   "2025-01-24-12-30-00": {"sender": "Alice", "message": "Hi!"},
-//   "2025-01-24-12-31-00": {"sender": "Bob", "message": "Hello!"}
-//    }
-
-      // allData.forEach((key, value) {
-      //   sendData.add(value);
-      // });
+      messagesList = allData.values
+          .map((value) => Map<String, dynamic>.from(value))
+          .toList();
     }
   } catch (e) {
     // print("Error: $e");
   }
 
-  return sendData;
+// Sample --->
+// messagesList = [
+//   {"sender": "Alice", "message": "Hi!"},
+//   {"sender": "Bob", "message": "Hello!"}
+// ]
+
+  return messagesList;
 }
