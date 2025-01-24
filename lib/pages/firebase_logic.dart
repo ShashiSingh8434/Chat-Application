@@ -123,8 +123,9 @@ Future<Map<dynamic, dynamic>> getMsg(String sender, String receiver) async {
         await _database.child(chatname).child("messages").get();
 
     if (dataSnapshot.exists) {
-      final allData = dataSnapshot.value as Map<dynamic,
-          dynamic>; // here -allData- have all the messages from the message section of chat
+      final allData = dataSnapshot.value as Map<dynamic, dynamic>;
+
+//   here -allData- have all the messages from the message section of chat
 
 //   This is the format of data stored in allData
 //   {
