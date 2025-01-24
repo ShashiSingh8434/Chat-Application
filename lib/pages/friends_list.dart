@@ -57,7 +57,7 @@ class NameListPageState extends State<NameListPage> {
 
   @override
   Widget build(BuildContext context) {
-    // final username = context.watch<UserProvider>().username;
+    final username = context.watch<UserProvider>().username;
 
     return Scaffold(
       appBar: AppBar(

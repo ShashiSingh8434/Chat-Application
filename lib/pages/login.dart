@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'firebase_logic.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -8,8 +9,11 @@ class LoginScreen extends StatefulWidget {
 }
 
 class _LoginScreenState extends State<LoginScreen> {
-  bool isNewUser = false;
+  final TextEditingController usernameController = TextEditingController();
+  final TextEditingController passwordController = TextEditingController();
 
+  bool isNewUser = false;
+  String sendingUsername = "";
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -30,6 +34,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
               TextField(
+                controller: usernameController,
                 decoration: InputDecoration(
                   labelText: 'Username or Email',
                   labelStyle: const TextStyle(color: Colors.grey),
@@ -40,6 +45,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 20),
               TextField(
+                controller: passwordController,
                 obscureText: true,
                 decoration: InputDecoration(
                   labelText: 'Password',
@@ -72,8 +78,33 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 10),
               Center(
                 child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
+                  onPressed: () async {
+                    if (isNewUser) {
+                      if (await verifyUser(usernameController.text,
+                              passwordController.text) ==
+                          false) {
+                        sendingUsername = usernameController.text;
+                        makeNewUser(
+                            usernameController.text, passwordController.text);
+                      }
+                    } else {
+                      if (await verifyUser(
+                          usernameController.text, passwordController.text)) {
+                        sendingUsername = usernameController.text;
+                        // print("Yes user got logged in");
+                      }
+                    }
+                    // print("making new user");
+
+                    // makeNewUser(
+                    //     usernameController.text, passwordController.text);
+
+                    // String sendingPassword = passwordController.text;
+                    if (sendingUsername != "") {
+                      Navigator.pop(context, sendingUsername);
+                    } else {
+                      Navigator.pop(context, "");
+                    }
                   },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.blue,

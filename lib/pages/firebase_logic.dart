@@ -1,5 +1,6 @@
 import 'package:firebase_database/firebase_database.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter/material.dart';
 
 final DatabaseReference _database = FirebaseDatabase.instance
     .refFromURL('https://chat-app-shashi-singh-default-rtdb.firebaseio.com/');
@@ -7,11 +8,13 @@ final DatabaseReference _database = FirebaseDatabase.instance
 Future<void> makeNewUser(String name, String password) async {
   try {
     await _database
-        .child("#userInfo")
+        .child("userInfo")
         .push()
         .set({"name": name, "password": password});
+
+    print("made a user");
   } catch (e) {
-    // print("error $e");
+    print("error $e   this is a error");
   }
 }
 
@@ -22,12 +25,12 @@ Future<void> makeNewChat(String member1, String member2) async {
     } else if (await verifyChat(member2, member1)) {
     } else {
       await _database
-          .child("#chatID")
+          .child("chatID")
           .push()
           .set({"member1": member1, "member2": member2});
       await _database
           .child(chatname)
-          .child("# member names")
+          .child("member names")
           .set({"member1": member1, "member2": member2});
     }
   } catch (e) {
@@ -38,7 +41,7 @@ Future<void> makeNewChat(String member1, String member2) async {
 Future<bool> verifyUser(String name, String password) async {
   bool verifiedUser = false;
   try {
-    DataSnapshot dataSnapshot = await _database.child("#userInfo").get();
+    DataSnapshot dataSnapshot = await _database.child("userInfo").get();
 
     if (dataSnapshot.exists) {
       final users = dataSnapshot.value as Map<dynamic, dynamic>;
@@ -60,7 +63,7 @@ Future<bool> verifyUser(String name, String password) async {
 Future<bool> verifyChat(String member1, String member2) async {
   bool verifiedChat = false;
   try {
-    DataSnapshot dataSnapshot = await _database.child("#chatID").get();
+    DataSnapshot dataSnapshot = await _database.child("chatID").get();
 
     if (dataSnapshot.exists) {
       final users = dataSnapshot.value as Map<dynamic, dynamic>;
