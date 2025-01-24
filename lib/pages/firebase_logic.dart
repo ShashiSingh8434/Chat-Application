@@ -6,9 +6,29 @@ final DatabaseReference _database = FirebaseDatabase.instance
 Future<void> makeNewUser(String name, String password) async {
   try {
     await _database
-        .child("userInfo")
+        .child("#userInfo")
         .push()
         .set({"name": name, "password": password});
+  } catch (e) {
+    // print("error $e");
+  }
+}
+
+Future<void> makeNewChat(String member1, String member2) async {
+  String chatname = "$member1-$member2 chat";
+  try {
+    if (await verifyChat(member1, member2)) {
+    } else if (await verifyChat(member2, member1)) {
+    } else {
+      await _database
+          .child("#chatID")
+          .push()
+          .set({"member1": member1, "member2": member2});
+      await _database
+          .child(chatname)
+          .child("# member names")
+          .set({"member1": member1, "member2": member2});
+    }
   } catch (e) {
     // print("error $e");
   }
@@ -17,7 +37,7 @@ Future<void> makeNewUser(String name, String password) async {
 Future<bool> verifyUser(String name, String password) async {
   bool verifiedUser = false;
   try {
-    DataSnapshot dataSnapshot = await _database.child("userInfo").get();
+    DataSnapshot dataSnapshot = await _database.child("#userInfo").get();
 
     if (dataSnapshot.exists) {
       final users = dataSnapshot.value as Map<dynamic, dynamic>;
@@ -36,49 +56,89 @@ Future<bool> verifyUser(String name, String password) async {
   return verifiedUser;
 }
 
-Future<void> pushData(
-    String username, String title, List<Map<String, dynamic>> plan) async {
-  String title0 = title;
-  for (var i = 0; i < plan.length; i++) {
-    Map<String, dynamic> plans = plan[i];
+Future<bool> verifyChat(String member1, String member2) async {
+  bool verifiedChat = false;
+  try {
+    DataSnapshot dataSnapshot = await _database.child("#chatID").get();
+
+    if (dataSnapshot.exists) {
+      final users = dataSnapshot.value as Map<dynamic, dynamic>;
+
+      users.forEach((key, value) {
+        if (value['member1'] == member1) {
+          if (value['member2'] == member2) {
+            verifiedChat = true;
+          }
+        }
+      });
+    }
+  } catch (e) {
+    // print("error $e");
+  }
+  return verifiedChat;
+}
+
+Future<void> pushMsg(
+    String sender, String receiver, String message, String datetime) async {
+  // datetime format is yyyy-mm-dd-hh-mm-ss
+  Map<String, String> sendData = {"sender": sender, "message": message};
+  String chatname = "";
+  if (await verifyChat(sender, receiver)) {
+    chatname = "$sender-$receiver chat";
+  } else if (await verifyChat(receiver, sender)) {
+    chatname = "$receiver-$sender chat";
+  } else {
+    chatname = "";
+  }
+
+  if (chatname != "") {
     try {
       await _database
-          .child(username)
-          .child("data")
-          .push()
-          .child(title0)
-          .update(plans);
+          .child(chatname)
+          .child("messages")
+          .child(datetime)
+          .set(sendData);
     } catch (e) {
       // print("error $e");
     }
   }
 }
 
-Future<Map<String, Map<String, dynamic>>> getData(String username) async {
-  final Map<String, Map<String, dynamic>> test = {};
+Future<Map<dynamic, dynamic>> getMsg(String sender, String receiver) async {
+  String chatname = "";
+  if (await verifyChat(sender, receiver)) {
+    chatname = "$sender-$receiver chat";
+  } else if (await verifyChat(receiver, sender)) {
+    chatname = "$receiver-$sender chat";
+  } else {
+    chatname = "";
+  }
+
+  Map<dynamic, dynamic> sendData = {};
+
+  // currently sendData is empty
 
   try {
     DataSnapshot dataSnapshot =
-        await _database.child(username).child("data").get();
+        await _database.child(chatname).child("messages").get();
 
     if (dataSnapshot.exists) {
-      final users = dataSnapshot.value as Map<dynamic, dynamic>;
+      final allData = dataSnapshot.value as Map<dynamic,
+          dynamic>; // here -allData- have all the messages from the message section of chat
 
-      users.forEach((key, value) {
-        final planData = value as Map<dynamic, dynamic>;
-        planData.forEach((planKey, planValue) {
-          final plan = planValue as Map<dynamic, dynamic>;
-          test[planKey] = {
-            "item": plan["title"] ?? "N/A",
-            "category": plan["category"] ?? "N/A",
-            "duration": plan["duration"] ?? 0,
-          };
-        });
-      });
+//   This is the format of data stored in allData
+//   {
+//   "2025-01-24-12-30-00": {"sender": "Alice", "message": "Hi!"},
+//   "2025-01-24-12-31-00": {"sender": "Bob", "message": "Hello!"}
+//    }
+
+      // allData.forEach((key, value) {
+      //   sendData.add(value);
+      // });
     }
   } catch (e) {
     // print("Error: $e");
   }
 
-  return test;
+  return sendData;
 }
