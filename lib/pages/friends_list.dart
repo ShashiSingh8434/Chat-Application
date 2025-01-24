@@ -1,7 +1,9 @@
+import 'package:chat_application/pages/chat.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'change_notifier.dart';
 import 'login.dart';
+import 'firebase_logic.dart';
 
 class NameListPage extends StatefulWidget {
   const NameListPage({super.key});
@@ -11,11 +13,19 @@ class NameListPage extends StatefulWidget {
 }
 
 class NameListPageState extends State<NameListPage> {
-  final List<String> names = [
-    "John",
-    "Jane",
-    "Paul",
-  ];
+  // final List<String> names = [
+  //   "John",
+  //   "Jane",
+  //   "Paul",
+  // ];
+
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() async {
+      await context.read<UserProvider>().initializeFriendsList();
+    });
+  }
 
   void _showAddNameDialog() {
     String newName = "";
@@ -39,11 +49,11 @@ class NameListPageState extends State<NameListPage> {
               child: Text("Cancel"),
             ),
             TextButton(
-              onPressed: () {
+              onPressed: () async {
                 if (newName.isNotEmpty) {
-                  // setState(() {
-                  //   // names.add(newName);
-                  // });
+                  if (await verifyFriend(newName)) {
+                    await context.read<UserProvider>().addFriend(newName);
+                  }
                 }
                 Navigator.of(context).pop();
               },
@@ -58,10 +68,11 @@ class NameListPageState extends State<NameListPage> {
   @override
   Widget build(BuildContext context) {
     final username = context.watch<UserProvider>().username;
+    final friendsList = context.watch<UserProvider>().friendsList;
 
     return Scaffold(
       appBar: AppBar(
-        title: Text("Name List"),
+        title: Text("Friend List"),
         actions: [
           Consumer<UserProvider>(
             builder: (context, userProvider, child) {
@@ -92,19 +103,32 @@ class NameListPageState extends State<NameListPage> {
         children: [
           Expanded(
             child: ListView.builder(
-              itemCount: names.length,
+              itemCount: friendsList.length,
               itemBuilder: (context, index) {
                 return ListTile(
-                  title: Text(names[index]),
-                  onTap: () {
-                    // Route to another page when a ListTile is tapped
-                    // Navigator.push(
-                    //   context,
-                    //   MaterialPageRoute(
-                    //     builder: (context) =>
-                    //         NameDetailPage(name: names[index]),
-                    //   ),
-                    // );
+                  title: Text(friendsList[index]),
+                  onTap: () async {
+                    if (await verifyChat(username, friendsList[index])) {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => ChatScreen(
+                              username: username, friend: friendsList[index]),
+                        ),
+                      );
+                    } else {
+                      if (await verifyChat(username, friendsList[index]) ==
+                          false) {
+                        makeNewChat(username, friendsList[index]);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => ChatScreen(
+                                username: username, friend: friendsList[index]),
+                          ),
+                        );
+                      }
+                    }
                   },
                 );
               },

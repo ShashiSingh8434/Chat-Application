@@ -12,9 +12,9 @@ Future<void> makeNewUser(String name, String password) async {
         .push()
         .set({"name": name, "password": password});
 
-    print("made a user");
+    // print("made a user");
   } catch (e) {
-    print("error $e   this is a error");
+    // print("error $e   this is a error");
   }
 }
 
@@ -51,6 +51,26 @@ Future<bool> verifyUser(String name, String password) async {
           if (value['password'] == password) {
             verifiedUser = true;
           }
+        }
+      });
+    }
+  } catch (e) {
+    // print("error $e");
+  }
+  return verifiedUser;
+}
+
+Future<bool> verifyFriend(String name) async {
+  bool verifiedUser = false;
+  try {
+    DataSnapshot dataSnapshot = await _database.child("userInfo").get();
+
+    if (dataSnapshot.exists) {
+      final users = dataSnapshot.value as Map<dynamic, dynamic>;
+
+      users.forEach((key, value) {
+        if (value['name'] == name) {
+          verifiedUser = true;
         }
       });
     }

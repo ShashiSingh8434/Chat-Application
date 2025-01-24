@@ -94,10 +94,6 @@ class _LoginScreenState extends State<LoginScreen> {
                         // print("Yes user got logged in");
                       }
                     }
-                    // print("making new user");
-
-                    // makeNewUser(
-                    //     usernameController.text, passwordController.text);
 
                     // String sendingPassword = passwordController.text;
                     if (sendingUsername != "") {
