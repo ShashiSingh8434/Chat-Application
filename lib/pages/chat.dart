@@ -18,17 +18,40 @@ class ChatScreen extends StatefulWidget {
 class _ChatScreenState extends State<ChatScreen> {
   late Future<List<Map<String, dynamic>>> messagesFuture;
   TextEditingController messageController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
     messagesFuture = getMsg(widget.username, widget.friend);
+    _scrollToBottom(); // Scroll when the screen loads
   }
 
   Future<void> _refreshMessages() async {
     setState(() {
       messagesFuture = getMsg(widget.username, widget.friend);
     });
+    await Future.delayed(const Duration(milliseconds: 100)); // Wait for refresh
+    _scrollToBottom(); // Ensure scrolling after refreshing
+  }
+
+  void _scrollToBottom() {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (_scrollController.hasClients) {
+        _scrollController.animateTo(
+          _scrollController.position.maxScrollExtent,
+          duration: const Duration(milliseconds: 300),
+          curve: Curves.easeOut,
+        );
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    messageController.dispose();
+    _scrollController.dispose();
+    super.dispose();
   }
 
   @override
@@ -53,7 +76,15 @@ class _ChatScreenState extends State<ChatScreen> {
                     return const Center(child: Text('No messages yet.'));
                   } else {
                     final messages = snapshot.data!;
+                    WidgetsBinding.instance.addPostFrameCallback((_) {
+                      if (_scrollController.hasClients) {
+                        _scrollController.jumpTo(
+                          _scrollController.position.maxScrollExtent,
+                        );
+                      }
+                    });
                     return ListView.builder(
+                      controller: _scrollController,
                       padding: const EdgeInsets.all(8.0),
                       itemCount: messages.length,
                       itemBuilder: (context, index) {
@@ -112,15 +143,18 @@ class _ChatScreenState extends State<ChatScreen> {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  onPressed: () {
+                  onPressed: () async {
                     if (messageController.text.isNotEmpty) {
-                      pushMsg(widget.username, widget.friend,
+                      await pushMsg(widget.username, widget.friend,
                           messageController.text);
+                      messageController.clear();
+                      setState(() {
+                        messagesFuture = getMsg(widget.username, widget.friend);
+                      });
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        _scrollToBottom();
+                      });
                     }
-                    messageController.clear();
-                    setState(() {
-                      messagesFuture = getMsg(widget.username, widget.friend);
-                    });
                   },
                   icon: const Icon(Icons.send, color: Colors.blue),
                 ),

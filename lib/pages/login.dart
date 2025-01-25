@@ -79,25 +79,25 @@ class _LoginScreenState extends State<LoginScreen> {
               Center(
                 child: ElevatedButton(
                   onPressed: () async {
-                    if (isNewUser) {
-                      if (await verifyUser(usernameController.text,
-                              passwordController.text) ==
-                          false) {
-                        sendingUsername = usernameController.text;
-                        makeNewUser(
-                            usernameController.text, passwordController.text);
+                    if (usernameController.text != "" ||
+                        passwordController.text != "") {
+                      if (isNewUser) {
+                        if (await verifyUser(usernameController.text,
+                                passwordController.text) ==
+                            false) {
+                          sendingUsername = usernameController.text;
+                          makeNewUser(
+                              usernameController.text, passwordController.text);
+                          Navigator.pop(context, sendingUsername);
+                        }
+                      } else if (isNewUser == false) {
+                        if (await verifyUser(
+                            usernameController.text, passwordController.text)) {
+                          sendingUsername = usernameController.text;
+                          Navigator.pop(context, sendingUsername);
+                          // print("Yes user got logged in");
+                        }
                       }
-                    } else {
-                      if (await verifyUser(
-                          usernameController.text, passwordController.text)) {
-                        sendingUsername = usernameController.text;
-                        // print("Yes user got logged in");
-                      }
-                    }
-
-                    // String sendingPassword = passwordController.text;
-                    if (sendingUsername != "") {
-                      Navigator.pop(context, sendingUsername);
                     } else {
                       Navigator.pop(context, "");
                     }

@@ -93,7 +93,9 @@ class NameListPageState extends State<NameListPage> {
               );
 
               if (username != null) {
-                context.read<UserProvider>().setUsername(username);
+                if (await verifyFriend(username)) {
+                  context.read<UserProvider>().setUsername(username);
+                }
               }
             },
           ),
