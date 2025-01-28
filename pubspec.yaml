@@ -13,6 +13,8 @@ dependencies:
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   intl: ^0.18.0
+  flutter_webrtc: ^0.8.0
+  # agora_rtc_engine: ^5.1.0
   flutter:
     sdk: flutter
 
