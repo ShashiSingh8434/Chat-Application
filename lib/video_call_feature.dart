@@ -17,6 +17,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
   MediaStream? _localStream;
   String? roomId;
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+  bool _isCaller = false;
 
   @override
   void initState() {
@@ -38,123 +39,155 @@ class _VideoCallPageState extends State<VideoCallPage> {
   @override
   void dispose() {
     _endCall(); // Ensure cleanup on dispose
+    _localRenderer.dispose();
+    _remoteRenderer.dispose();
     super.dispose();
   }
 
   Future<void> _startCall() async {
-    await _getUserMedia();
-    await _createPeerConnection();
-    await _createOffer();
+    try {
+      await _getUserMedia();
+      await _createPeerConnection();
+      await _createOffer();
+    } catch (e) {
+      print("Error starting call: $e");
+    }
   }
 
   Future<void> _joinCall(String roomId) async {
-    await _getUserMedia();
-    await _createPeerConnection();
-    await _listenForOffer(roomId);
+    try {
+      await _getUserMedia();
+      await _createPeerConnection();
+      await _listenForOffer(roomId);
+    } catch (e) {
+      print("Error joining call: $e");
+    }
   }
 
   Future<void> _getUserMedia() async {
-    _localStream = await navigator.mediaDevices.getUserMedia({
-      'video': true,
-      'audio': true,
-    });
+    try {
+      _localStream = await navigator.mediaDevices.getUserMedia({
+        'video': true,
+        'audio': true,
+      });
 
-    setState(() {
-      _localRenderer.srcObject = _localStream;
-    });
+      setState(() {
+        _localRenderer.srcObject = _localStream;
+      });
+    } catch (e) {
+      print("Error getting user media: $e");
+    }
   }
 
   Future<void> _createPeerConnection() async {
-    _peerConnection = await createPeerConnection({
-      'iceServers': [
-        {'urls': 'stun:stun.l.google.com:19302'}
-      ],
-    });
+    try {
+      _peerConnection = await createPeerConnection({
+        'iceServers': [
+          {'urls': 'stun:stun.l.google.com:19302'}
+        ],
+      });
 
-    _peerConnection!.onIceCandidate = (candidate) {
-      if (candidate != null && roomId != null) {
-        String candidateType = _peerConnection!.signalingState ==
-                RTCSignalingState.RTCSignalingStateHaveLocalOffer
-            ? 'callerCandidates'
-            : 'calleeCandidates';
+      _peerConnection!.onIceCandidate = (candidate) async {
+        if (candidate != null && roomId != null) {
+          String collectionName =
+              _isCaller ? 'callerCandidates' : 'calleeCandidates';
+          await _firestore
+              .collection('calls')
+              .doc(roomId)
+              .collection(collectionName)
+              .add({
+            'candidate': candidate.candidate,
+            'sdpMid': candidate.sdpMid,
+            'sdpMLineIndex': candidate.sdpMLineIndex,
+          });
+        }
+      };
 
-        _firestore
-            .collection('calls')
-            .doc(roomId)
-            .collection(candidateType)
-            .add({
-          'candidate': candidate.candidate,
-          'sdpMid': candidate.sdpMid,
-          'sdpMLineIndex': candidate.sdpMLineIndex,
+      _peerConnection!.onTrack = (event) {
+        if (event.track.kind == 'video') {
+          print("Remote video track received");
+          setState(() {
+            _remoteRenderer.srcObject = event.streams[0];
+          });
+        }
+      };
+
+      if (_localStream != null) {
+        _localStream!.getTracks().forEach((track) {
+          _peerConnection!.addTrack(track, _localStream!);
         });
       }
-    };
-
-    _peerConnection!.onTrack = (event) {
-      if (event.track.kind == 'video') {
-        setState(() {
-          _remoteRenderer.srcObject = event.streams[0];
-        });
-      }
-    };
-
-    _localStream!.getTracks().forEach((track) {
-      _peerConnection!.addTrack(track, _localStream!);
-    });
+    } catch (e) {
+      print("Error creating peer connection: $e");
+    }
   }
 
   Future<void> _createOffer() async {
-    final offer = await _peerConnection!.createOffer();
-    await _peerConnection!.setLocalDescription(offer);
+    try {
+      if (_peerConnection == null) return;
 
-    final docRef = await _firestore.collection('calls').add({
-      'offer': {
-        'sdp': offer.sdp,
-        'type': offer.type,
-      },
-    });
+      final offer = await _peerConnection!.createOffer();
+      await _peerConnection!.setLocalDescription(offer);
 
-    setState(() {
-      roomId = docRef.id;
-    });
+      final docRef = await _firestore.collection('calls').add({
+        'offer': {
+          'sdp': offer.sdp,
+          'type': offer.type,
+        },
+      });
 
-    _firestore
-        .collection('calls')
-        .doc(roomId)
-        .snapshots()
-        .listen((snapshot) async {
-      if (snapshot.data()?['answer'] != null) {
-        final answer = snapshot.data()!['answer'];
-        await _peerConnection!.setRemoteDescription(
-          RTCSessionDescription(answer['sdp'], answer['type']),
-        );
-      }
-    });
+      setState(() {
+        roomId = docRef.id;
+        _isCaller = true;
+      });
 
-    _listenForIceCandidates(roomId!, 'calleeCandidates');
-  }
-
-  Future<void> _listenForOffer(String roomId) async {
-    this.roomId = roomId;
-    final docSnapshot = await _firestore.collection('calls').doc(roomId).get();
-
-    if (docSnapshot.exists) {
-      final offer = docSnapshot.data()?['offer'];
-      await _peerConnection!.setRemoteDescription(
-        RTCSessionDescription(offer['sdp'], offer['type']),
-      );
-
-      final answer = await _peerConnection!.createAnswer();
-      await _peerConnection!.setLocalDescription(answer);
-
-      await _firestore.collection('calls').doc(roomId).update({
-        'answer': {
-          'sdp': answer.sdp,
-          'type': answer.type,
+      _firestore
+          .collection('calls')
+          .doc(roomId)
+          .snapshots()
+          .listen((snapshot) async {
+        if (snapshot.exists && snapshot.data()?['answer'] != null) {
+          final answer = snapshot.data()!['answer'];
+          await _peerConnection!.setRemoteDescription(
+            RTCSessionDescription(answer['sdp'], answer['type']),
+          );
         }
       });
 
-      _listenForIceCandidates(roomId, 'callerCandidates');
+      _listenForIceCandidates(roomId!, 'calleeCandidates');
+    } catch (e) {
+      print("Error creating offer: $e");
+    }
+  }
+
+  Future<void> _listenForOffer(String roomId) async {
+    try {
+      this.roomId = roomId;
+      _isCaller = false;
+
+      final docSnapshot =
+          await _firestore.collection('calls').doc(roomId).get();
+
+      if (docSnapshot.exists && docSnapshot.data()?['offer'] != null) {
+        final offer = docSnapshot.data()!['offer'];
+        await _peerConnection!.setRemoteDescription(
+          RTCSessionDescription(offer['sdp'], offer['type']),
+        );
+
+        final answer = await _peerConnection!.createAnswer();
+        await _peerConnection!.setLocalDescription(answer);
+
+        await _firestore.collection('calls').doc(roomId).update({
+          'answer': {
+            'sdp': answer.sdp,
+            'type': answer.type,
+          }
+        });
+
+        _listenForIceCandidates(roomId, 'callerCandidates');
+      }
+    } catch (e) {
+      print("Error listening for offer: $e");
     }
   }
 
@@ -176,16 +209,23 @@ class _VideoCallPageState extends State<VideoCallPage> {
   }
 
   Future<void> _endCall() async {
-    await _peerConnection?.close();
-    _peerConnection = null;
+    try {
+      await _peerConnection?.close();
+      _peerConnection = null;
 
-    if (roomId != null) {
-      await _firestore.collection('calls').doc(roomId).delete();
+      if (roomId != null) {
+        await _firestore.collection('calls').doc(roomId).delete();
+      }
+
+      setState(() {
+        _localRenderer.srcObject = null;
+        _remoteRenderer.srcObject = null;
+      });
+
+      _localStream?.dispose();
+    } catch (e) {
+      print("Error ending call: $e");
     }
-
-    _localRenderer.srcObject = null;
-    _remoteRenderer.srcObject = null;
-    _localStream?.dispose();
   }
 
   @override
