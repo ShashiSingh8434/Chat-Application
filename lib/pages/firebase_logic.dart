@@ -129,7 +129,63 @@ Future<void> pushMsg(String sender, String receiver, String message) async {
   }
 }
 
-Future<List<Map<String, dynamic>>> getMsg(
+// Future<List<Map<String, dynamic>>> getMsg(
+//     String sender, String receiver) async {
+//   String chatname = "";
+//   if (await verifyChat(sender, receiver)) {
+//     chatname = "$sender-$receiver chat";
+//   } else if (await verifyChat(receiver, sender)) {
+//     chatname = "$receiver-$sender chat";
+//   } else {
+//     chatname = "";
+//   }
+
+//   List<Map<String, dynamic>> messagesList = [];
+
+//   try {
+//     DataSnapshot dataSnapshot =
+//         await _database.child(chatname).child("messages").get();
+
+//     if (dataSnapshot.exists) {
+//       final allData = dataSnapshot.value as Map<dynamic, dynamic>;
+
+//       // Extract messages along with their timestamps (keys)
+//       List<Map<String, dynamic>> messagesWithTimestamps = allData.entries.map(
+//         (entry) {
+//           return {
+//             "timestamp": entry.key, // Keep the timestamp for sorting
+//             ...Map<String, dynamic>.from(entry.value), // Message data
+//           };
+//         },
+//       ).toList();
+
+//       // Sort the messages by timestamp
+//       messagesWithTimestamps.sort((a, b) {
+//         return a['timestamp'].compareTo(b['timestamp']);
+//       });
+
+//       // Remove the timestamp key if not needed in the UI
+//       messagesList = messagesWithTimestamps.map((msg) {
+//         return {
+//           "sender": msg["sender"],
+//           "message": msg["message"],
+//         };
+//       }).toList();
+//     }
+//   } catch (e) {
+//     // Handle errors
+//   }
+
+//   return messagesList;
+// }
+
+// Sample --->
+// messagesList = [
+//   {"sender": "Alice", "message": "Hi!"},
+//   {"sender": "Bob", "message": "Hello!"}
+// ]
+
+Future<Stream<List<Map<String, dynamic>>>> getMessagesStream(
     String sender, String receiver) async {
   String chatname = "";
   if (await verifyChat(sender, receiver)) {
@@ -140,49 +196,28 @@ Future<List<Map<String, dynamic>>> getMsg(
     chatname = "";
   }
 
-  List<Map<String, dynamic>> messagesList = [];
-
-  try {
-    DataSnapshot dataSnapshot =
-        await _database.child(chatname).child("messages").get();
-
-    if (dataSnapshot.exists) {
-      final allData = dataSnapshot.value as Map<dynamic, dynamic>;
-
-      // Extract messages along with their timestamps (keys)
-      List<Map<String, dynamic>> messagesWithTimestamps = allData.entries.map(
-        (entry) {
-          return {
-            "timestamp": entry.key, // Keep the timestamp for sorting
-            ...Map<String, dynamic>.from(entry.value), // Message data
-          };
-        },
-      ).toList();
-
-      // Sort the messages by timestamp
-      messagesWithTimestamps.sort((a, b) {
-        return a['timestamp'].compareTo(b['timestamp']);
-      });
-
-      // Remove the timestamp key if not needed in the UI
-      messagesList = messagesWithTimestamps.map((msg) {
+  // Return a stream of messages ordered by timestamp
+  return _database
+      .child(chatname)
+      .child("messages")
+      .orderByKey() // This orders the messages by their keys (timestamps)
+      .onValue // Listening for value changes
+      .map((event) {
+    final data = event.snapshot.value as Map<dynamic, dynamic>?;
+    if (data != null) {
+      // Convert data into a list of maps
+      List<Map<String, dynamic>> messages = data.entries.map((entry) {
         return {
-          "sender": msg["sender"],
-          "message": msg["message"],
+          "timestamp": entry.key, // Keep the timestamp as a key for sorting
+          ...Map<String, dynamic>.from(entry.value), // Message data
         };
       }).toList();
+
+      // Sort messages based on the timestamp
+      messages.sort((a, b) => a['timestamp'].compareTo(b['timestamp']));
+      return messages;
+    } else {
+      return [];
     }
-  } catch (e) {
-    // Handle errors
-  }
-
-  return messagesList;
+  });
 }
-
-
-
-// Sample --->
-// messagesList = [
-//   {"sender": "Alice", "message": "Hi!"},
-//   {"sender": "Bob", "message": "Hello!"}
-// ]

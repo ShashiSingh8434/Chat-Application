@@ -2,9 +2,21 @@ import 'package:flutter/material.dart';
 import 'package:flutter_webrtc/flutter_webrtc.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'dart:math';
+
+import 'pages/firebase_logic.dart';
 
 class VideoCallPage extends StatefulWidget {
-  const VideoCallPage({super.key});
+  final String chatID;
+  final String username;
+  final String friend;
+
+  const VideoCallPage({
+    super.key,
+    required this.chatID,
+    required this.username,
+    required this.friend,
+  });
 
   @override
   _VideoCallPageState createState() => _VideoCallPageState();
@@ -44,23 +56,32 @@ class _VideoCallPageState extends State<VideoCallPage> {
     super.dispose();
   }
 
+  // Generate a unique room ID (you can customize this)
+  // String _generateRoomId() {
+  //   final random = Random();
+  //   return widget.chatID +
+  //       DateTime.now().millisecondsSinceEpoch.toString() +
+  //       random.nextInt(1000).toString();
+  // }
+
   Future<void> _startCall() async {
     try {
       await _getUserMedia();
       await _createPeerConnection();
       await _createOffer();
     } catch (e) {
-      print("Error starting call: $e");
+      // print("Error starting call: $e");
     }
   }
 
   Future<void> _joinCall(String roomId) async {
     try {
+      this.roomId = roomId;
       await _getUserMedia();
       await _createPeerConnection();
       await _listenForOffer(roomId);
     } catch (e) {
-      print("Error joining call: $e");
+      // print("Error joining call: $e");
     }
   }
 
@@ -75,12 +96,20 @@ class _VideoCallPageState extends State<VideoCallPage> {
         _localRenderer.srcObject = _localStream;
       });
     } catch (e) {
-      print("Error getting user media: $e");
+      // print("Error getting user media: $e");
     }
   }
 
   Future<void> _createPeerConnection() async {
     try {
+      // if (roomId.toString() != null) {
+      // pushMsg(
+      //   widget.username,
+      //   widget.friend,
+      //   roomId.toString(),
+      // );
+      // }
+
       _peerConnection = await createPeerConnection({
         'iceServers': [
           {'urls': 'stun:stun.l.google.com:19302'}
@@ -92,7 +121,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
           String collectionName =
               _isCaller ? 'callerCandidates' : 'calleeCandidates';
           await _firestore
-              .collection('calls')
+              .collection(widget.chatID)
               .doc(roomId)
               .collection(collectionName)
               .add({
@@ -105,7 +134,6 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
       _peerConnection!.onTrack = (event) {
         if (event.track.kind == 'video') {
-          print("Remote video track received");
           setState(() {
             _remoteRenderer.srcObject = event.streams[0];
           });
@@ -118,7 +146,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
         });
       }
     } catch (e) {
-      print("Error creating peer connection: $e");
+      // print("Error creating peer connection: $e");
     }
   }
 
@@ -129,12 +157,19 @@ class _VideoCallPageState extends State<VideoCallPage> {
       final offer = await _peerConnection!.createOffer();
       await _peerConnection!.setLocalDescription(offer);
 
-      final docRef = await _firestore.collection('calls').add({
+      // Save offer to Firestore
+      final docRef = await _firestore.collection(widget.chatID).add({
         'offer': {
           'sdp': offer.sdp,
           'type': offer.type,
         },
       });
+
+      pushMsg(
+        widget.username,
+        widget.friend,
+        docRef.id.toString(),
+      );
 
       setState(() {
         roomId = docRef.id;
@@ -142,7 +177,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       });
 
       _firestore
-          .collection('calls')
+          .collection(widget.chatID)
           .doc(roomId)
           .snapshots()
           .listen((snapshot) async {
@@ -156,7 +191,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
       _listenForIceCandidates(roomId!, 'calleeCandidates');
     } catch (e) {
-      print("Error creating offer: $e");
+      // print("Error creating offer: $e");
     }
   }
 
@@ -166,7 +201,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       _isCaller = false;
 
       final docSnapshot =
-          await _firestore.collection('calls').doc(roomId).get();
+          await _firestore.collection(widget.chatID).doc(roomId).get();
 
       if (docSnapshot.exists && docSnapshot.data()?['offer'] != null) {
         final offer = docSnapshot.data()!['offer'];
@@ -177,7 +212,8 @@ class _VideoCallPageState extends State<VideoCallPage> {
         final answer = await _peerConnection!.createAnswer();
         await _peerConnection!.setLocalDescription(answer);
 
-        await _firestore.collection('calls').doc(roomId).update({
+        // Send answer to Firestore
+        await _firestore.collection(widget.chatID).doc(roomId).update({
           'answer': {
             'sdp': answer.sdp,
             'type': answer.type,
@@ -187,13 +223,13 @@ class _VideoCallPageState extends State<VideoCallPage> {
         _listenForIceCandidates(roomId, 'callerCandidates');
       }
     } catch (e) {
-      print("Error listening for offer: $e");
+      // print("Error listening for offer: $e");
     }
   }
 
   void _listenForIceCandidates(String roomId, String candidateType) {
     _firestore
-        .collection('calls')
+        .collection(widget.chatID)
         .doc(roomId)
         .collection(candidateType)
         .snapshots()
@@ -214,7 +250,7 @@ class _VideoCallPageState extends State<VideoCallPage> {
       _peerConnection = null;
 
       if (roomId != null) {
-        await _firestore.collection('calls').doc(roomId).delete();
+        await _firestore.collection(widget.chatID).doc(roomId).delete();
       }
 
       setState(() {
@@ -224,14 +260,16 @@ class _VideoCallPageState extends State<VideoCallPage> {
 
       _localStream?.dispose();
     } catch (e) {
-      print("Error ending call: $e");
+      // print("Error ending call: $e");
     }
+
+    // Navigator.pop(context);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: const Text('WebRTC Video Call')),
+      appBar: AppBar(title: const Text('Video Call using WebRTC (practice)')),
       body: Column(
         children: [
           Expanded(child: RTCVideoView(_localRenderer, mirror: true)),
@@ -257,8 +295,12 @@ class _VideoCallPageState extends State<VideoCallPage> {
                         actions: [
                           TextButton(
                             onPressed: () {
-                              _joinCall(controller.text);
-                              Navigator.pop(context);
+                              // Join the call with the entered roomId
+                              String roomId = controller.text;
+                              if (roomId.isNotEmpty) {
+                                _joinCall(roomId);
+                                Navigator.pop(context);
+                              }
                             },
                             child: const Text('Join'),
                           ),

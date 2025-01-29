@@ -13,12 +13,6 @@ class NameListPage extends StatefulWidget {
 }
 
 class NameListPageState extends State<NameListPage> {
-  // final List<String> names = [
-  //   "John",
-  //   "Jane",
-  //   "Paul",
-  // ];
-
   @override
   void initState() {
     super.initState();
