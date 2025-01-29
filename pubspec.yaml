@@ -9,11 +9,13 @@ environment:
 dependencies:
   firebase_core: ^3.10.1
   firebase_database: ^11.3.1
+  cloud_firestore: ^5.0.3
   provider: ^6.1.2
   hive: ^2.2.3
   hive_flutter: ^1.1.0
   intl: ^0.18.0
-  flutter_webrtc: ^0.8.0
+  flutter_webrtc: ^0.9.36
+  permission_handler: ^10.0.0
   # agora_rtc_engine: ^5.1.0
   flutter:
     sdk: flutter
