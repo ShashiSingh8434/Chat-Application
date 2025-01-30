@@ -1,4 +1,4 @@
-# Chat Application
+# Chat Application -- **INCOMPLETE HAVE TO ADD VIDEO FEATURE CORRECTLY IN WEBRTC BRANCH
 
 A **real-time chat application** built using **Flutter** and **Firebase Realtime Database**, designed for seamless and efficient communication. This app includes features such as secure user authentication, real-time messaging, and profile management, all wrapped in a responsive and user-friendly UI.
 
