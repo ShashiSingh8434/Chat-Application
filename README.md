@@ -85,10 +85,6 @@ https://github.com/user-attachments/assets/dd6783cc-9d4b-4b4d-a217-9b47f8f47c77
 
 Contributions are welcome! Feel free to open issues or submit pull requests to improve the app.
 
-## License
-
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for more details.
-
 -----
 
 Happy coding! 🚀
