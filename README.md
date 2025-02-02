@@ -81,6 +81,11 @@ Here is a sample video of this project :
 
 https://github.com/user-attachments/assets/dd6783cc-9d4b-4b4d-a217-9b47f8f47c77
 
+
+https://github.com/user-attachments/assets/6bebd3ef-66e5-482f-9818-a4f1e232792c
+
+
+
 ## Contributing
 
 Contributions are welcome! Feel free to open issues or submit pull requests to improve the app.
